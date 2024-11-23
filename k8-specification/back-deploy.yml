@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: wanderlust-backend # Replace with your backend image name
+          ports:
+            - containerPort: 5000
+          env:
+            - name: DB_HOST
+              value: mongodb://mongodb:27017/mydatabase
+      restartPolicy: Always
