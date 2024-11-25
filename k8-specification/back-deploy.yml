@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: wanderlust-backend # Replace with your backend image name
+          image: tushar8117/backend # Replace with your backend image name
           ports:
             - containerPort: 5000
           env:
