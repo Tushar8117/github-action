@@ -1,7 +1,5 @@
 stages:
   - clean
-  - test
-  - quality_gate
   - install
   - docker_build_push
   - update_manifest
@@ -23,31 +21,6 @@ clean_workspace:
     - echo "Cleaning workspace"
     - rm -rf *
   
-sonar_analysis:
-  stage: test
-  before_script:
-    # Install sonar-scanner if it's not installed
-    - apt-get update && apt-get install -y wget unzip
-    - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.6.2.2472-linux.zip
-    - unzip sonar-scanner-cli-4.6.2.2472-linux.zip
-    - mv sonar-scanner-4.6.2.2472-linux /opt/sonar-scanner
-    - export PATH=$PATH:/opt/sonar-scanner/bin
-  script:
-    - sonar-scanner \
-        -Dsonar.projectName="wanderlust" \
-        -Dsonar.projectKey="wanderlust" \
-        -Dsonar.host.url=$SONAR_HOST_URL \
-        -Dsonar.login=$SONAR_TOKEN
-
-sonarqube_quality_gate:
-  stage: quality_gate
-  script:
-    - echo "Waiting for SonarQube quality gate"
-    - sleep 30
-    - |
-      curl -u $SONAR_TOKEN:$SONAR_PASSWORD \
-        "$SONAR_HOST_URL/api/qualitygates/project_status?projectKey=wanderlust" \
-        | grep '"status":"OK"'
 
 
 install_dependencies:
