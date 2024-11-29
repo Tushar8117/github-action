@@ -1,6 +1,5 @@
 stages:
   - clean
-  - checkout
   - analyze
   - quality_gate
   - install
@@ -24,11 +23,6 @@ clean_workspace:
     - echo "Cleaning workspace"
     - rm -rf *
 
-checkout:
-  stage: checkout
-  script:
-    - echo "Cloning repository"
-    - git clone -b main https://gitlab.com/devops4432748/wanderlust.git .
 
 sonarqube_analysis:
   stage: analyze
