@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: tushar8117/frontend  # Replace with your frontend image name
+          image: tushar8117/frontend:latest  # Replace with your frontend image name
           ports:
             - containerPort: 5173
           env:
