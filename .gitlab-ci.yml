@@ -22,11 +22,11 @@ clean_workspace:
   script:
     - echo "Cleaning workspace"
     - rm -rf *
-
+  
 sonar_analysis:
   stage: test
   before_script:
-    # Install sonar-scanner
+    # Install sonar-scanner if it's not installed
     - apt-get update && apt-get install -y wget unzip
     - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.6.2.2472-linux.zip
     - unzip sonar-scanner-cli-4.6.2.2472-linux.zip
@@ -34,8 +34,8 @@ sonar_analysis:
     - export PATH=$PATH:/opt/sonar-scanner/bin
   script:
     - sonar-scanner \
-        -Dsonar.projectName=wanderlust \
-        -Dsonar.projectKey=wanderlust \
+        -Dsonar.projectName="wanderlust" \
+        -Dsonar.projectKey="wanderlust" \
         -Dsonar.host.url=$SONAR_HOST_URL \
         -Dsonar.login=$SONAR_TOKEN
 
