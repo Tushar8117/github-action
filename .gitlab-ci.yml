@@ -1,47 +1,60 @@
 stages:
-  - clean
-  - docker_build_push
-  - update_manifest
-
+  - build
+  - push
+  - run
+  - stop
 
 variables:
-  SONAR_HOST_URL: ${SONAR_HOST_URL}
-  DOCKER_IMAGE_FRONTEND: "tushar8117/front-end"
-  DOCKER_IMAGE_BACKEND: "tushar8117/back-end"
-  MANIFEST_PATH: "k8-specification/" # Update with the relative path of your manifest file
-  IMAGE_TAG: "v1"
-  GITLAB_ACCESS_TOKEN: ${GITLAB_ACCESS_TOKEN}
-  SONAR_TOKEN: ${SONAR_TOKEN}
+  DOCKER_DRIVER: overlay2
 
-
-clean_workspace:
-  stage: clean
+# Docker Build Stage
+build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
   script:
-    - echo "Cleaning workspace"
-    - rm -rf *
-  
+    - docker info
+    - docker build -t frontend:latest ./frontend
+    - docker build -t backend:latest ./backend
+    - docker images
+    - docker images > images_list.txt
+  artifacts:
+    paths:
+      - images_list.txt 
+  only:
+    - main
 
-docker_build_push:
-  stage: docker_build_push
+#Docker Push Stage
+push:
+  stage: push
+  image: docker:latest
+  services:
+    - docker:dind
   script:
-    - echo "Building and pushing Docker images"
-    - docker build -t tushar8117/front-end:latest ./frontend
-    - docker build -t tushar8117/back-end:latest ./backend
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
-    - docker push tushar8117/front-end:latest
-    - docker push tushar8117/back-end:latest
-  
+    - cat images_list.txt
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+    - docker tag frontend:latest $CI_REGISTRY/$CI_PROJECT_PATH/frontend:$CI_COMMIT_REF_SLUG
+    - docker push $CI_REGISTRY/$CI_PROJECT_PATH:$CI_COMMIT_REF_SLUG
+  only:
+    - main
 
-update_manifest:
-  stage: update_manifest
+run:
+  stage: run
+  image: docker:latest
+  services:
+    - docker:dind
   script:
-    - git config --global user.email "ci@example.com"
-    - git config --global user.name "YourGitLabUsername"
-    - git remote set-url origin https://$GITLAB_ACCESS_TOKEN@gitlab.com/Tushar2003/Devops/wanderlust.git
-    - sed -i "s|\${IMAGE_TAG}|$IMAGE_TAG|g" deployment.yml
-    - git add deployment.yml
-    - git commit -m "Update image tag to $IMAGE_TAG"
-    - git push origin main
+    - docker run --name front -d -p 3000:5173 $CI_REGISTRY/$CI_PROJECT_PATH:$CI_COMMIT_REF_SLUG
+
+stop:
+  stage: stop
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker stop front
+  when: manual
 
 
 
