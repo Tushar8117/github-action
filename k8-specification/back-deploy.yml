@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: tushar8117/backend:latest # Replace with your backend image name
+          image: tushar8117/backend:${IMAGE_TAG} # Replace with your backend image name
           ports:
             - containerPort: 5000
           env:
