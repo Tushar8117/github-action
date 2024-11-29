@@ -1,32 +1,106 @@
 stages:
-  - build
-  #- push
+  - clean
+  - checkout
+  - analyze
+  - quality_gate
+  - install
+  - docker_build_push
+  - update_manifest
+  - image_scan
 
 variables:
-  DOCKER_DRIVER: overlay2
-  
+  SONAR_HOST_URL: ${SONAR_HOST_URL}
+  DOCKER_IMAGE_FRONTEND: "tushar8117/front-end"
+  DOCKER_IMAGE_BACKEND: "tushar8117/back-end"
+  MANIFEST_PATH: "k8-specification/" # Update with the relative path of your manifest file
+  IMAGE_TAG: "v1"
+  GITLAB_ACCESS_TOKEN: ${GITLAB_ACCESS_TOKEN}
+  SONAR_TOKEN: ${SONAR_TOKEN}
 
-# Docker Build Stage
-build:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
+
+clean_workspace:
+  stage: clean
   script:
-    - docker info
-    - docker build -t frontend_image ./frontend
-  only:
-    - main
+    - echo "Cleaning workspace"
+    - rm -rf *
 
-# Docker Push Stage
-#push:
-  #stage: push
-  #image: docker:latest
-  #services:
-    #- docker:dind
-  #script:
-   # - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
-   # - docker tag $IMAGE_NAME $CI_REGISTRY/$CI_PROJECT_PATH:$CI_COMMIT_REF_SLUG
-   # - docker push $CI_REGISTRY/$CI_PROJECT_PATH:$CI_COMMIT_REF_SLUG
-  #only:
-#    - main
+checkout:
+  stage: checkout
+  script:
+    - echo "Cloning repository"
+    - git clone -b main https://gitlab.com/devops4432748/wanderlust.git .
+
+sonarqube_analysis:
+  stage: analyze
+  script:
+    - echo "Running SonarQube analysis"
+    - sonar-scanner \
+        -Dsonar.projectName=wanderlust \
+        -Dsonar.projectKey=wanderlust \
+        -Dsonar.host.url=$SONAR_HOST_URL \
+        -Dsonar.login=$SONAR_TOKEN
+  dependencies:
+    - checkout
+
+sonarqube_quality_gate:
+  stage: quality_gate
+  script:
+    - echo "Waiting for SonarQube quality gate"
+    - sleep 30
+    - |
+      curl -u $SONAR_TOKEN:$SONAR_PASSWORD \
+        "$SONAR_HOST_URL/api/qualitygates/project_status?projectKey=wanderlust" \
+        | grep '"status":"OK"'
+
+
+install_dependencies:
+  stage: install
+  script:
+    - echo "Installing dependencies"
+    - npm install
+
+
+trivy_fs_scan:
+  stage: security_scan
+  script:
+    - echo "Running Trivy file system scan"
+    - trivy fs . > trivy-fs-scan.txt
+  artifacts:
+    paths:
+      - trivy-fs-scan.txt
+
+docker_build_push:
+  stage: docker_build_push
+  script:
+    - echo "Building and pushing Docker images"
+    - docker build -t $DOCKER_IMAGE_FRONTEND:$IMAGE_TAG ./frontend
+    - docker build -t $DOCKER_IMAGE_BACKEND:$IMAGE_TAG ./backend
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
+    - docker push $DOCKER_IMAGE_FRONTEND:$IMAGE_TAG
+    - docker push $DOCKER_IMAGE_BACKEND:$IMAGE_TAG
+  dependencies:
+    - install_dependencies
+
+update_manifest:
+  stage: update_manifest
+  script:
+    - git config --global user.email "ci@example.com"
+    - git config --global user.name "YourGitLabUsername"
+    - git remote set-url origin https://$GITLAB_ACCESS_TOKEN@gitlab.com/Tushar2003/Devops/wanderlust.git
+    - sed -i "s|\${IMAGE_TAG}|$IMAGE_TAG|g" deployment.yml
+    - git add deployment.yml
+    - git commit -m "Update image tag to $IMAGE_TAG"
+    - git push origin main
+
+
+trivy_image_scan:
+  stage: image_scan
+  script:
+    - echo "Scanning Docker images with Trivy"
+    - trivy image $DOCKER_IMAGE_FRONTEND:$IMAGE_TAG > trivy-image-frontend-scan.txt
+    - trivy image $DOCKER_IMAGE_BACKEND:$IMAGE_TAG > trivy-image-backend-scan.txt
+  artifacts:
+    paths:
+      - trivy-image-frontend-scan.txt
+      - trivy-image-backend-scan.txt
+
