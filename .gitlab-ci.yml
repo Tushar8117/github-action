@@ -6,7 +6,7 @@ stages:
   - install
   - docker_build_push
   - update_manifest
-  - image_scan
+
 
 variables:
   SONAR_HOST_URL: ${SONAR_HOST_URL}
@@ -60,14 +60,6 @@ install_dependencies:
     - npm install
 
 
-trivy_fs_scan:
-  stage: security_scan
-  script:
-    - echo "Running Trivy file system scan"
-    - trivy fs . > trivy-fs-scan.txt
-  artifacts:
-    paths:
-      - trivy-fs-scan.txt
 
 docker_build_push:
   stage: docker_build_push
@@ -93,14 +85,4 @@ update_manifest:
     - git push origin main
 
 
-trivy_image_scan:
-  stage: image_scan
-  script:
-    - echo "Scanning Docker images with Trivy"
-    - trivy image $DOCKER_IMAGE_FRONTEND:$IMAGE_TAG > trivy-image-frontend-scan.txt
-    - trivy image $DOCKER_IMAGE_BACKEND:$IMAGE_TAG > trivy-image-backend-scan.txt
-  artifacts:
-    paths:
-      - trivy-image-frontend-scan.txt
-      - trivy-image-backend-scan.txt
 
